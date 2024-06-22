@@ -1,8 +1,8 @@
-# Blue-link
+# Bluelink
 A simple bluetooth manager for your terminal.
 
 This bluetooth manager aims to run in the background of your device, to automatically pair with known devices.
-It also provides an easy-to-use CLI interface you can access with `$ blue-link`,
+It also provides an easy-to-use CLI interface you can access with `$ bluelink`,
 where you can manage known devices and connect to new ones.
 
 # How to install
