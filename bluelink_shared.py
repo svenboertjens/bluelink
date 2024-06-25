@@ -18,7 +18,7 @@ def unlinked_wrapper(f):
         try:
             buf1 = discovery_state.buf
             buf2 = connected_devices.buf
-            buf3 = manually_disconnected.bug
+            buf3 = manually_disconnected.buf
         except Exception as e:
             # Return -1 because we couldn't get a buffer
             return -1
@@ -80,8 +80,8 @@ class Shared:
                 discovery_state = shared_memory.SharedMemory(name="BLUELINK-DISCOVERY-STATE", create=True, size=1)
                 connected_devices = shared_memory.SharedMemory(name="BLUELINK-CONNECTED-DEVICES", create=True, size=self.max_size)
                 manually_disconnected = shared_memory.SharedMemory(name="BLUELINK-MANUALLY-DISCONNECTED-DEVICES", create=True, size=self.max_size)
-                # Assign False to the boolean instance (0 = False, 1 = True)
-                discovery_state.buf[0] = 0
+                # Assign False to the boolean instance
+                discovery_state.buf[:1] = b"\x00"   
                 
                 # Make an empty array as bytes
                 empty_pickle_arr = pickle.dumps([])
@@ -134,7 +134,7 @@ class Shared:
         if value_type in self.lists:
             return self.buffer_to_array(self.lists[value_type])
         else:
-            return discovery_state.buf[0] == 1
+            return discovery_state.buf[:1] == b"\x01"
     
     @unlinked_wrapper
     def add_instance(self, value_type, value):
@@ -163,7 +163,7 @@ class Shared:
     
     @unlinked_wrapper
     def set_instance(self, value):
-        discovery_state.buf[0] = value and 1 or 0
+        discovery_state.buf[:1] = value and b"\x01" or b"\x00"
     
     def cleanup(self):
         # Clean up all memory addresses

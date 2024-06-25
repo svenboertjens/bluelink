@@ -3,7 +3,6 @@ Description=Bluelink Service
 After=network.target
 
 [Service]
-#Type=simple
 ExecStart=/usr/bin/python3 /opt/bluelink/bluelink/bluelink_manage.py
 Restart=on-failure
 

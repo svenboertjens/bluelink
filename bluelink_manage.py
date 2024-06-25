@@ -23,7 +23,7 @@ bluelink = None
 
 # A fake function to return when a callable is expected but none is found
 def fake_callable(self):
-    return None
+    return
 
 # Function to attempt to solve some common kwargs argument issues
 def solve_kwargs_issues(**kwargs):
@@ -109,7 +109,7 @@ def retry_wrapper(retries=2, delay=1):
                             
                     # Wait for the delay
                     time.sleep(delay)
-            return "Issues"
+            return None
         return wrapper
     return decorator
 
@@ -394,6 +394,8 @@ def init(cli: bool = False):
     # Create the class and set it globally
     global bluelink
     bluelink = __Bluelink()
+    
+    syslogs.log(str(shared.get_instance()), "debug")
     
     # Check whether a discovery loop is already active
     if not shared.get_instance() and not cli:
