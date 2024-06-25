@@ -109,7 +109,8 @@ def retry_wrapper(retries=2, delay=1):
                             
                     # Wait for the delay
                     time.sleep(delay)
-            return None
+            # Return False to indicate failure
+            return False
         return wrapper
     return decorator
 
@@ -164,6 +165,9 @@ class __Bluelink:
         self.ctl.stdout.readline()
         
     def __init__(self):
+        # Variable stating whether the class has shut down
+        self.has_shutdown = False
+        
         try:
             # Set up a bluetoothctl CLI that will continuously scan for devices and allows for connecting, pairing, and trusting devices
             self.ctl = subprocess.Popen(["bluetoothctl"], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
@@ -239,6 +243,9 @@ class __Bluelink:
                 syslogs.log(f"Paired with device '{name}'. MAC: '{mac}'", "info")
             else:
                 syslogs.log(f"Paired with device. MAC: '{mac}'", "info")
+                
+            # Return True to indicate success
+            return True
             
     # Function to unpair with devices
     def unpair(self, process_id, mac, name: str = None):
@@ -249,6 +256,8 @@ class __Bluelink:
             syslogs.log(f"Unpaired from device '{name}'. MAC: '{mac}'", "info")
         else:
             syslogs.log(f"Unpaired from device. MAC: '{mac}'", "info")
+            
+        return True
         
     # Function to connect to devices
     def connect(self, process_id, mac, name: str = None):
@@ -260,6 +269,11 @@ class __Bluelink:
             self.execute_ctl(process_id=process_id, command=f"connect {mac}")
             # Add the device to the list
             self.shared_check(shared.add_instance("connected", self.hash_mac(mac)))
+            
+            return True
+        
+        # Return None to indicate already connected
+        return None
             
     # Function to disconnect from devices
     def disconnect(self, process_id, mac, name: str = None):
@@ -273,6 +287,10 @@ class __Bluelink:
                 shared.remove_instance("connected", hashed_mac)
             # Add the device to the manually disconnected list
             shared.add_instance("disconnected", hashed_mac)
+            
+            return True
+        
+        return None
         
     # Function to automatically connect to known devices
     def auto_connect(self, process_id, devices):
@@ -317,9 +335,6 @@ class __Bluelink:
                 # And store them to the list
                 devices[mac] = name
                 
-        if device_type and device_type.lower() == "paired":
-            self.paired_devices = devices
-                
         # Return the list of devices
         return devices
     
@@ -363,13 +378,19 @@ class __Bluelink:
     # Function to shut down the class entirely
     def shutdown(self, quick: bool = False):
         syslogs.log("Shutting down a process of bluelink.", "info")
+        # Set the has_shutdown value to True
+        self.has_shutdown = False
         # Stop the bluetoothctl CLI
-        if not quick and self.ctl:
+        if self.ctl:
             try:
                 self.ctl.stdin.write("exit\n")
                 self.ctl.stdin.flush()
                 self.ctl.terminate()
-                del self.ctl
+                # Wait for the CLI to terminate itself fully
+                if not quick:
+                    self.ctl.wait()
+                    del self.ctl
+                    
             except Exception as e:
                 syslogs.log(f"Error terminating bluetoothctl CLI: {e}", "error")
         
@@ -391,11 +412,11 @@ class __Bluelink:
 
 # Function to initiate the class
 def init(cli: bool = False):
+    syslogs.log(f"Initiating the device discovery process on thread '{__name__}'.", "info")
+    
     # Create the class and set it globally
     global bluelink
     bluelink = __Bluelink()
-    
-    syslogs.log(str(shared.get_instance()), "debug")
     
     # Check whether a discovery loop is already active
     if not shared.get_instance() and not cli:
@@ -414,10 +435,10 @@ def init(cli: bool = False):
 # Initiate the discovery loop for the class
 if __name__ == "__main__":
     # Initiate on the main thread to keep the main thread for systemd
-    syslogs.log("Initiating the device discovery process on the main thread.", "info")
+    syslogs.log("Auto-initiating the device discovery process on the main thread.", "info")
     init()
 elif not shared.get_instance():
-    syslogs.log(f"Initiating the device discovery process on thread '{__name__}'.", "info")
-    # Start the init on a thread to prevent halting the terminal
+    syslogs.log(f"Auto-initiating the device discovery process on thread '{__name__}'.", "info")
+    # Start the init on a thread to prevent halting the process that imported this
     threading.Thread(target=init).start()
 
