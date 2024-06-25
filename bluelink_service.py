@@ -181,6 +181,9 @@ class BluelinkCLI(cmd.Cmd):
             num += 1
             # Store the device based on the number index
             new_list.append([mac, name])
+            
+        # Print a new line for aesthetics
+        print("")
         
         # Update the last devices list
         if not device_type:

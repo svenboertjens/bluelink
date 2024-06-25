@@ -1,4 +1,5 @@
 from multiprocessing import shared_memory
+import bluelink_system_logs as syslogs
 import warnings
 import pickle
 
@@ -6,14 +7,24 @@ import pickle
 warnings.filterwarnings("ignore", category=ResourceWarning)
 warnings.filterwarnings("ignore", category=UserWarning)
 
-# This will hold theconnected devices shared memory for the wrapper
+# These will hold the shared memories globally
+discovery_state = None
 connected_devices = None
+manually_disconnected = None
 
 # Wrapper function to return -1 if the memory is up for deletion
 def unlinked_wrapper(f):
     def wrapper(*args, **kwargs):
+        try:
+            buf1 = discovery_state.buf
+            buf2 = connected_devices.buf
+            buf3 = manually_disconnected.bug
+        except Exception as e:
+            # Return -1 because we couldn't get a buffer
+            return -1
+        
         # Check whether the first byte is zeroed out
-        if not connected_devices or bytes(connected_devices.buf[:1]) == b"\x00":
+        if bytes(connected_devices.buf[:1]) == b"\x00":
             # Return -1 to indicate closed memory
             return -1
         # Call the function normally if the memory is open
@@ -25,8 +36,10 @@ class Shared:
         # The max amount of bytes
         self.max_size = 256
         
-        # Get the global connected_devices to assign to that one
+        # Get the global variables for the shared memories
+        global discovery_state
         global connected_devices
+        global manually_disconnected
         
         # Set a permission error variable to indicate whether this occurs later
         self.permission_error = False
@@ -59,35 +72,32 @@ class Shared:
         else:
             try:
                 # Attempt to get the existing shared memory files
-                self.discovery_state = shared_memory.SharedMemory(name="BLUELINK-DISCOVERY-STATE")
-                self.connected_devices = shared_memory.SharedMemory(name="BLUELINK-CONNECTED-DEVICES")
-                self.manually_disconnected = shared_memory.SharedMemory(name="BLUELINK-MANUALLY-DISCONNECTED-DEVICES")
+                discovery_state = shared_memory.SharedMemory(name="BLUELINK-DISCOVERY-STATE")
+                connected_devices = shared_memory.SharedMemory(name="BLUELINK-CONNECTED-DEVICES")
+                manually_disconnected = shared_memory.SharedMemory(name="BLUELINK-MANUALLY-DISCONNECTED-DEVICES")
             except FileNotFoundError:
                 # Create the instances because they don't exist
-                self.discovery_state = shared_memory.SharedMemory(name="BLUELINK-DISCOVERY-STATE", create=True, size=1)
-                self.connected_devices = shared_memory.SharedMemory(name="BLUELINK-CONNECTED-DEVICES", create=True, size=self.max_size)
-                self.manually_disconnected = shared_memory.SharedMemory(name="BLUELINK-MANUALLY-DISCONNECTED-DEVICES", create=True, size=self.max_size)
+                discovery_state = shared_memory.SharedMemory(name="BLUELINK-DISCOVERY-STATE", create=True, size=1)
+                connected_devices = shared_memory.SharedMemory(name="BLUELINK-CONNECTED-DEVICES", create=True, size=self.max_size)
+                manually_disconnected = shared_memory.SharedMemory(name="BLUELINK-MANUALLY-DISCONNECTED-DEVICES", create=True, size=self.max_size)
                 # Assign False to the boolean instance (0 = False, 1 = True)
-                self.discovery_state.buf[0] = 0
+                discovery_state.buf[0] = 0
                 
                 # Make an empty array as bytes
                 empty_pickle_arr = pickle.dumps([])
                 # Fill the bytes array with
                 empty_arr = empty_pickle_arr + b'\x00' * (self.max_size - len(empty_pickle_arr))
-                self.connected_devices.buf[:self.max_size] = empty_arr
-                self.manually_disconnected.buf[:self.max_size] = empty_arr
-                
-                # Set the global conencted devices shm for the wrapper
-                connected_devices = self.connected_devices
-                
-                # Make a list of the list instances to get them by key
-                self.lists = {
-                    "connected": self.connected_devices,
-                    "disconnected": self.manually_disconnected
-                }
+                connected_devices.buf[:self.max_size] = empty_arr
+                manually_disconnected.buf[:self.max_size] = empty_arr
             except PermissionError:
                 # Set a variable to indicate we couldn't open shared mamory
                 self.permission_error = True
+                
+            # Make a list of the list instances to get them by key
+            self.lists = {
+                "connected": connected_devices,
+                "disconnected": manually_disconnected
+            }
                 
     
     def buffer_to_array(self, shm):
@@ -124,7 +134,7 @@ class Shared:
         if value_type in self.lists:
             return self.buffer_to_array(self.lists[value_type])
         else:
-            return self.discovery_state.buf[0] == 1
+            return discovery_state.buf[0] == 1
     
     @unlinked_wrapper
     def add_instance(self, value_type, value):
@@ -153,11 +163,11 @@ class Shared:
     
     @unlinked_wrapper
     def set_instance(self, value):
-        self.discovery_state.buf[0] = value and 1 or 0
+        discovery_state.buf[0] = value and 1 or 0
     
     def cleanup(self):
         # Clean up all memory addresses
-        self.clean_buffer(self.discovery_state, 1)
-        self.clean_buffer(self.connected_devices)
-        self.clean_buffer(self.manually_disconnected)
+        self.clean_buffer(discovery_state, 1)
+        self.clean_buffer(connected_devices)
+        self.clean_buffer(manually_disconnected)
 
