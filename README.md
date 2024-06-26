@@ -12,3 +12,8 @@ Note: This was developed on Arch, so sorry if for some reason it's incompatible 
 
 I'm planning to bring this package to AUR, but for now, there's a convenient setup script.
 Simply download the ZIP and extract it, and run the `auto_setup.sh` (with root).
+
+# Issues & upcoming changes
+
+Currently, there's some issues in the system, especially in the CLI. So I'm working on that.
+Also, I plan on reworking the way the system works to make it more performant and secure.
