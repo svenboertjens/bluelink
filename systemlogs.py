@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/opt/pypackages/bin/python
 
 from systemd.journal import JournalHandler
 import logging

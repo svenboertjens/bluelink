@@ -9,29 +9,33 @@ if [[ $EUID -ne 0 ]]; then
    exit 1
 fi
 
-# Create the service directory under /opt/bluelink/bluelink
-echo "Creating /opt/bluelink/bluelink directory..."
-sudo mkdir -p /opt/bluelink/bluelink
+# Create the service directory under /opt/bluelink
+echo "Creating /opt/bluelink directory..."
+mkdir -p /opt/bluelink
 
-echo "Moving scripts to /opt/bluelink/bluelink and making them executable..."
+echo "Moving scripts to /opt/bluelink/bluelink and making the files executable..."
 # Move all scripts to the package directory and make them executable
-sudo cp bluelink_manage.py /opt/bluelink/bluelink/
-sudo cp bluelink_shared.py /opt/bluelink/bluelink/
-sudo cp bluelink_system_logs.py /opt/bluelink/bluelink/
-sudo cp bluelink_service.py /opt/bluelink/bluelink/
-sudo chmod +x /opt/bluelink/bluelink/*.py
+cp *.py /opt/bluelink/
+chmod +x /opt/bluelink/*.py
+
+echo "Creating a venv for the required Python packages..."
+# Set up a venv with the required packages
+cp requirements.txt /opt/bluelink/
+cd /opt/bluelink
+python -m venv venv
+/opt/bluelink/venv/bin/pip install -r requirements.txt
 
 # Create a symbolic link to the CLI script in /usr/local/bin
 echo "Creating symbolic link for CLI script..."
-sudo ln -sf /opt/bluelink/bluelink/bluelink_service.py /usr/local/bin/bluelink
+ln -sf /opt/bluelink/bluelink_service.py /usr/local/bin/bluelink
 
 # Move the systemd service file to the systemd directory
 echo "Moving the service file to /etc/systemd/system..."
-sudo cp bluelink.service /etc/systemd/system/bluelink.service
+cp bluelink.service /etc/systemd/system/bluelink.service
 
 # Reload systemd manager configuration
 echo "Reloading systemctl daemon..."
-sudo systemctl daemon-reload
+systemctl daemon-reload
 
 # Prompt user to enable bluelink service at startup
 while true; do
@@ -40,7 +44,7 @@ while true; do
 
     if [[ "$response" == "y" || "$response" == "yes" || "$response" == "" ]]; then
         echo "Enabling bluelink service using systemctl..."
-        sudo systemctl enable bluelink
+        systemctl enable bluelink
         break
     elif [[ "$response" == "n" || "$response" == "no" ]]; then
         echo "Not enabling bluelink service at startup."
@@ -52,4 +56,5 @@ done
 
 echo ""
 echo "You can use the CLI by running the command 'bluelink'."
-echo "Setup completed successfully."
+echo "This file can be safely removed."
+echo "Setup completed."
