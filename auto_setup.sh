@@ -15,23 +15,16 @@ mkdir -p /opt/bluelink
 
 echo "Moving scripts to /opt/bluelink/bluelink and making the files executable..."
 # Move all scripts to the package directory and make them executable
-cp *.py /opt/bluelink/
+cp -f *.py /opt/bluelink/
 chmod +x /opt/bluelink/*.py
-
-echo "Creating a venv for the required Python packages..."
-# Set up a venv with the required packages
-cp requirements.txt /opt/bluelink/
-cd /opt/bluelink
-python -m venv venv
-/opt/bluelink/venv/bin/pip install -r requirements.txt
-
-# Create a symbolic link to the CLI script in /usr/local/bin
-echo "Creating symbolic link for CLI script..."
-ln -sf /opt/bluelink/bluelink_service.py /usr/local/bin/bluelink
 
 # Move the systemd service file to the systemd directory
 echo "Moving the service file to /etc/systemd/system..."
-cp bluelink.service /etc/systemd/system/bluelink.service
+cp -f "bluelink.service" "/etc/systemd/system/bluelink.service"
+
+# Create a symbolic link to the CLI script in /usr/local/bin
+echo "Creating symbolic link for CLI script..."
+ln -sf /opt/bluelink/cli.py /usr/local/bin/bluelink
 
 # Reload systemd manager configuration
 echo "Reloading systemctl daemon..."

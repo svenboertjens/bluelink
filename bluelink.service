@@ -3,7 +3,7 @@ Description=Bluelink Service
 After=network.target
 
 [Service]
-ExecStart=/opt/bluelink/venv/bin/python /opt/bluelink/bluelink_manage.py
+ExecStart=sudo /usr/bin/python /opt/bluelink/manager.py
 Restart=on-failure
 
 [Install]
